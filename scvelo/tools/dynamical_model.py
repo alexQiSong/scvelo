@@ -25,7 +25,7 @@ class DynamicsRecovery(BaseDynamics):
 
     def initialize(self):
         # set weights
-        u, s, w, perc = self.u, self.s, self.weights, 98
+        u, s, w, perc = self.u, self.s, self.weights, 98 c
         u_w = u[w]
         s_w = s[w]
 
@@ -490,13 +490,13 @@ def recover_dynamics(
         return_model = len(var_names) < 5
 
     pars = read_pars(adata)
-    alpha, beta, gamma, t_, scaling, std_u, std_s, likelihood = pars[:8]
-    u0, s0, pval, steady_u, steady_s, varx = pars[8:]
+    alpha, beta, gamma, t_, scaling, std_u, std_s, likelihood = pars[:8] # All have length of #genes (numpy 1d array)
+    u0, s0, pval, steady_u, steady_s, varx = pars[8:] # All have length of #genes (numpy 1d array)
     # likelihood[np.isnan(likelihood)] = 0
     idx, L, P = [], [], []
-    T = np.zeros(adata.shape) * np.nan
-    Tau = np.zeros(adata.shape) * np.nan
-    Tau_ = np.zeros(adata.shape) * np.nan
+    T = np.zeros(adata.shape) * np.nan # Time assignments for gene by cell matrix?
+    Tau = np.zeros(adata.shape) * np.nan # Time assignments for gene by cell matrix?
+    Tau_ = np.zeros(adata.shape) * np.nan # Time assignments for gene by cell matrix?
     if "fit_t" in adata.layers.keys():
         T = adata.layers["fit_t"]
     if "fit_tau" in adata.layers.keys():
@@ -504,8 +504,8 @@ def recover_dynamics(
     if "fit_tau_" in adata.layers.keys():
         Tau_ = adata.layers["fit_tau_"]
 
-    conn = get_connectivities(adata) if fit_connected_states else None
-
+    conn = get_connectivities(adata) if fit_connected_states else None # connectivity matrix, cell by cell scipy sparse matrix
+    # Main function to perform parameter estimation for the full dynamics
     res = parallelize(
         _fit_recovery,
         var_names,
@@ -531,16 +531,16 @@ def recover_dynamics(
     idx, dms = map(_flatten, zip(*res))
 
     for ix, dm in zip(idx, dms):
-        T[:, ix], Tau[:, ix], Tau_[:, ix] = dm.t, dm.tau, dm.tau_
-        alpha[ix], beta[ix], gamma[ix], t_[ix], scaling[ix] = dm.pars[:, -1]
-        u0[ix], s0[ix], pval[ix] = dm.u0, dm.s0, dm.pval_steady
-        steady_u[ix], steady_s[ix] = dm.steady_u, dm.steady_s
-        beta[ix] /= scaling[ix]
-        steady_u[ix] *= scaling[ix]
+        T[:, ix], Tau[:, ix], Tau_[:, ix] = dm.t, dm.tau, dm.tau_ # 1d array with shape equal to number of cells (cell specific)
+        alpha[ix], beta[ix], gamma[ix], t_[ix], scaling[ix] = dm.pars[:, -1] # Gene specific paramters 
+        u0[ix], s0[ix], pval[ix] = dm.u0, dm.s0, dm.pval_steady # initial state (gene specific)
+        steady_u[ix], steady_s[ix] = dm.steady_u, dm.steady_s # steady state (gene specific)
+        beta[ix] /= scaling[ix] # scale beta
+        steady_u[ix] *= scaling[ix] # scale steady state u
 
         std_u[ix], std_s[ix] = dm.std_u, dm.std_s
-        likelihood[ix], varx[ix] = dm.likelihood, dm.varx
-        L.append(dm.loss)
+        likelihood[ix], varx[ix] = dm.likelihood, dm.varx # get likelihood after fitting
+        L.append(dm.loss) #??
 
     _pars = [
         alpha,
